@@ -10,7 +10,12 @@ if [[ -d ~/.zsh_functions ]]; then
 fi
 
 # Load organized aliases from separate file
-[[ -f ~/.zsh_config/aliases.zsh ]] && source ~/.zsh_config/aliases.zsh
+if [[ -f ~/.zsh_config/aliases.zsh ]]; then
+  source ~/.zsh_config/aliases.zsh
+  echo "✅ Loaded aliases from ~/.zsh_config/aliases.zsh" >&2
+else
+  echo "❌ Aliases file not found: ~/.zsh_config/aliases.zsh" >&2
+fi
 
 # Load specific function modules if present
 for f in \
