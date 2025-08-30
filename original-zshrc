@@ -1,0 +1,903 @@
+# Amazon Q pre block. Keep at the top of this file.
+[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh"
+
+# Silence Powerlevel10k init warning while keeping instant prompt fast
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# ========================================
+# PATH Configuration (consolidated)
+# ========================================
+# Use array form for clarity and de-duplication
+typeset -U path
+path=(
+  /opt/homebrew/bin
+  /opt/homebrew/sbin
+  $HOME/bin
+  $HOME/.local/bin
+  /usr/local/bin
+  $HOME/Library/Python/3.9/bin
+  /Library/Frameworks/R.framework/Resources/bin
+  /opt/homebrew/opt/openjdk/bin
+  $path
+)
+# Ensure conda/mambaforge base CLI tools (alto, fissfc) are available without activating base
+if [[ -d "/opt/homebrew/Caskroom/mambaforge/base/bin" ]]; then
+  path=(/opt/homebrew/Caskroom/mambaforge/base/bin $path)
+fi
+# Only add custom_tools if it exists
+[[ -d "/Users/pavb5f/custom_tools" ]] && path=(/Users/pavb5f/custom_tools $path)
+# GNU coreutils (must come after Homebrew is in PATH)
+if command -v brew >/dev/null 2>&1; then
+  path=($(brew --prefix)/opt/coreutils/libexec/gnubin $path)
+fi
+# Java configuration
+export JAVA_HOME="/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"
+export PATH
+
+# ========================================
+# Environment Variables
+# ========================================
+export ZSH="$HOME/.oh-my-zsh"
+export DOTNET_ROOT="/opt/homebrew/opt/dotnet/libexec"
+export LDFLAGS="-L/opt/homebrew/opt/libxml2/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/libxml2/include"
+export R_LIBS_USER=~/R/arm64-apple-darwin20/4.5
+command -v vivid >/dev/null 2>&1 && export LS_COLORS="$(vivid generate molokai)"
+
+# Conda environment behavior (keep mamba active, disable conda auto-activation/PS1)
+export CONDA_CHANGEPS1=no
+export CONDA_AUTO_ACTIVATE_BASE=false
+
+# Store sensitive keys in a separate file or use a secrets manager
+# export OPENAI_API_KEY="your-key-here"  # Don't store in plain text!
+# Better: source ~/.secrets  # Create this file with proper permissions (chmod 600)
+
+# ========================================
+# Shell Options
+# ========================================
+setopt NOTIFY        # notify immediately when jobs finish
+setopt noclobber     # prevent accidental overwrites with > (use >| to override)
+setopt pipefail      # make pipelines fail if any component fails
+setopt ERR_RETURN    # return from function on error  
+setopt PRINT_EXIT_VALUE  # print exit values of commands that exit non-zero  
+# WARN_CREATE_GLOBAL is noisy with many plugins; keep it off for interactive shells
+unsetopt WARN_CREATE_GLOBAL
+# NO_UNSET disabled as it conflicts with Oh My Zsh initialization
+# Note: ERR_EXIT and VERBOSE disabled - use debug_on/trace for verbose mode
+# setopt CORRECT_ALL   # catch & offer to fix typos (disabled below)
+
+# ========================================
+# Oh My Zsh Configuration
+# ========================================
+# Set theme
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Oh My Zsh plugins (using built-in plugin system)
+plugins=(
+  git
+  web-search
+  sudo
+  copyfile
+  copybuffer
+  dirhistory
+  docker
+  fzf
+  history-substring-search
+  zsh-syntax-highlighting  # Must be last for proper highlighting
+)
+
+export DISABLE_ZSH_COPILOT=true
+
+unsetopt correct_all
+
+# Configure syntax highlighting BEFORE loading Oh My Zsh
+export ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
+
+# Initialize and configure syntax highlighting styles
+typeset -A ZSH_HIGHLIGHT_STYLES
+ZSH_HIGHLIGHT_STYLES[builtin]='fg=blue,bold'                    # Shell builtins - blue, reliable
+ZSH_HIGHLIGHT_STYLES[function]='fg=magenta'                     # User functions - magenta, custom
+ZSH_HIGHLIGHT_STYLES[alias]='fg=cyan'                          # Aliases - cyan, shortcuts
+ZSH_HIGHLIGHT_STYLES[suffix-alias]='fg=green,underline'        # Suffix aliases - green underlined
+ZSH_HIGHLIGHT_STYLES[global-alias]='fg=cyan,bold'              # Global aliases - cyan bold
+ZSH_HIGHLIGHT_STYLES[command]='fg=green'                       # External commands - green, tools
+ZSH_HIGHLIGHT_STYLES[hashed-command]='fg=green,bold'           # Cached commands - bright green
+ZSH_HIGHLIGHT_STYLES[precommand]='fg=yellow,underline'         # Command modifiers - yellow underlined
+ZSH_HIGHLIGHT_STYLES[reserved-word]='fg=yellow,bold'           # Reserved words like if, for, etc.
+ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'              # Unknown/invalid commands
+ZSH_HIGHLIGHT_STYLES[path]='fg=white,underline'                # File paths
+ZSH_HIGHLIGHT_STYLES[globbing]='fg=blue,bold'                  # Glob patterns
+ZSH_HIGHLIGHT_STYLES[history-expansion]='fg=blue'              # History expansion
+ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=yellow'       # Single quoted strings
+ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=yellow'       # Double quoted strings
+ZSH_HIGHLIGHT_STYLES[dollar-quoted-argument]='fg=yellow'       # Dollar quoted strings
+ZSH_HIGHLIGHT_STYLES[redirection]='fg=magenta'                 # I/O redirection
+ZSH_HIGHLIGHT_STYLES[comment]='fg=black,bold'                  # Comments
+ZSH_HIGHLIGHT_STYLES[commandseparator]='fg=white,bold'         # Command separators like ;, &, |
+ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=cyan'           # Short options like -l
+ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=cyan'           # Long options like --help
+ZSH_HIGHLIGHT_STYLES[autodirectory]='fg=green,underline'       # Auto directory change
+
+# Source Oh My Zsh
+# Set completion directories before oh-my-zsh (compinit)
+if [[ -d "/Users/pavb5f/.docker/completions" ]]; then
+  fpath=(/Users/pavb5f/.docker/completions $fpath)
+fi
+if command -v brew >/dev/null 2>&1; then
+  fpath=($(brew --prefix)/share/zsh-completions $fpath)
+fi
+if [[ -d "/opt/homebrew/share/zsh/site-functions" ]]; then
+  fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
+fi
+export ZSH_DISABLE_COMPFIX=true
+# Quietly source Oh My Zsh to avoid WARN_CREATE_GLOBAL noise from plugins
+_omz_quiet_source() { emulate -L zsh; setopt no_warn_create_global; source $ZSH/oh-my-zsh.sh }
+_omz_quiet_source
+unset -f _omz_quiet_source
+
+# ========================================
+# Post Oh My Zsh Configurations
+# ========================================
+# Load additional highlighting patterns from external file
+if [[ -f "/Users/pavb5f/Documents/barskilab-workflows/my_local_test_data/extra_zsh_highlighting.zsh" ]]; then
+  source "/Users/pavb5f/Documents/barskilab-workflows/my_local_test_data/extra_zsh_highlighting.zsh"
+fi
+
+
+
+# Smart Performance and Error Monitoring System with Enhanced Debugging
+# Declare globals explicitly to avoid WARN_CREATE_GLOBAL in hooks
+typeset -g _command_start_time=""
+typeset -g _command_pid=""
+typeset -g _monitor_job=""
+typeset -g _last_command=""
+
+# Error code meanings for better diagnostics
+typeset -gA ERROR_MEANINGS
+ERROR_MEANINGS[1]="General error"
+ERROR_MEANINGS[2]="Misuse of shell builtins"
+ERROR_MEANINGS[126]="Command invoked cannot execute (permissions)"
+ERROR_MEANINGS[127]="Command not found"
+ERROR_MEANINGS[128]="Invalid argument to exit"
+ERROR_MEANINGS[130]="Script terminated by Ctrl+C"
+ERROR_MEANINGS[255]="Exit status out of range"
+
+_smart_timer_preexec() {
+  [[ -o interactive ]] || return
+  _command_start_time=$SECONDS
+  _command_pid=""
+  _last_command="$1"  # Store the command for error reporting
+}
+
+_smart_timer_precmd() {
+  emulate -L zsh
+  setopt localoptions no_warn_create_global nonotify
+  local exit_code=$?
+  [[ -o interactive ]] || { _command_start_time=""; return; }
+  
+  # Kill any running monitor
+  [[ -n $_monitor_job ]] && kill $_monitor_job 2>/dev/null
+  _monitor_job=""
+  
+  if [[ -n $_command_start_time ]]; then
+    local elapsed=$(($SECONDS - $_command_start_time))
+    
+    # Smart reporting based on duration
+    if [[ $elapsed -gt 60 ]]; then
+      echo >&2 "⏱️  Long command completed: ${elapsed}s ($(($elapsed/60))m $(($elapsed%60))s)"
+    elif [[ $elapsed -gt 10 ]]; then
+      echo >&2 "⏱️  Command took ${elapsed}s"
+    fi
+    
+    _command_start_time=""
+  fi
+  
+  # Enhanced error reporting with context
+  if [[ $exit_code -ne 0 ]]; then
+    local error_meaning="${ERROR_MEANINGS[$exit_code]:-Unknown error}"
+    echo >&2 "❌ Command failed with exit code $exit_code: $error_meaning"
+    
+    # Show the command that failed (truncate if too long)
+    if [[ -n $_last_command ]]; then
+      local cmd_display="$_last_command"
+      [[ ${#cmd_display} -gt 80 ]] && cmd_display="${cmd_display:0:80}..."
+      echo >&2 "   Command: $cmd_display"
+    fi
+    
+    # Provide context-specific suggestions
+    case $exit_code in
+      126) echo >&2 "   💡 Try: chmod +x <file> or check file permissions" ;;
+      127) echo >&2 "   💡 Try: which <command> or check if command is installed" ;;
+      130) echo >&2 "   💡 Command was interrupted by Ctrl+C" ;;
+      2)   echo >&2 "   💡 Check command syntax and arguments" ;;
+    esac
+  fi
+  
+  # Clear the last command
+  _last_command=""
+}
+
+# Background monitor for long-running commands
+_background_monitor() {
+  local start_time=$1
+  local command_line="$2"
+  local parent_pid=$$
+  
+  sleep 10
+  # Check if parent still exists
+  kill -0 "$parent_pid" 2>/dev/null || return
+  
+  local elapsed=$(($SECONDS - $start_time))
+  if [[ $elapsed -ge 10 ]]; then
+    echo >&2 "🔄 Long command running: ${elapsed}s - $command_line"
+  fi
+  
+  sleep 20  # Total 30s
+  kill -0 "$parent_pid" 2>/dev/null || return
+  
+  elapsed=$(($SECONDS - $start_time))
+  if [[ $elapsed -ge 30 ]]; then
+    echo >&2 "🔄 Still running: ${elapsed}s - $command_line"
+    
+    # Monitor every minute after 30s
+    while kill -0 "$parent_pid" 2>/dev/null; do
+      sleep 60
+      elapsed=$(($SECONDS - $start_time))
+      echo >&2 "🔄 Running: $(($elapsed/60))m $(($elapsed%60))s"
+    done
+  fi
+}
+
+_enhanced_preexec() {
+  emulate -L zsh
+  setopt localoptions no_warn_create_global nomonitor nonotify
+  [[ -o interactive ]] || return
+  # Kill any existing monitor first
+  [[ -n $_monitor_job ]] && kill $_monitor_job 2>/dev/null
+  _monitor_job=""
+  
+  _command_start_time=$SECONDS
+  local command_line="$1"
+  local cmd="${command_line%% *}"
+  
+  # Skip simple assignments
+  [[ "$command_line" == [A-Za-z_][A-Za-z0-9_]*=* ]] && return
+  
+  # Exclude common instant commands
+  case "$cmd" in
+    source|exec|cd|ls|ll|la|pwd|echo|cat|which|type|alias|history|jobs|fg|bg|kill|ps|grep|awk|sed|head|tail|wc|sort|uniq|tr|cut|basename|dirname|whoami|id|date|clear|exit|logout|true|false|test|help|man|info)
+      return ;;
+  esac
+  
+  # Only monitor commands likely to be long-running (by command name)
+  case "$cmd" in
+    make|cmake|cargo|npm|yarn|pip|brew|docker|git|curl|wget|ssh|scp|rsync|tar|zip|unzip|find|locate|sleep|wait)
+      _background_monitor "$_command_start_time" "$command_line" &
+      _monitor_job=$!
+      ;;
+  esac
+}
+
+
+# Register smart monitoring hooks
+autoload -Uz add-zsh-hook
+add-zsh-hook preexec _enhanced_preexec
+add-zsh-hook precmd _smart_timer_precmd
+
+# Load Powerlevel10k config
+[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+
+# Initialize external tools AFTER Oh My Zsh (conditional)
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+command -v thefuck >/dev/null 2>&1 && eval "$(thefuck --alias)"
+command -v atuin >/dev/null 2>&1 && eval "$(atuin init zsh)"
+
+# Note: compinit will be called again later for Amazon Q completions
+
+# Custom functions
+function check_alias_usage() {
+  # Only show alias suggestions after shell is fully initialized
+  local cmd="${1%% *}"
+  
+  # Skip if already aliased or is a function
+  if alias "$cmd" >/dev/null 2>&1 || type -f "$cmd" >/dev/null 2>&1; then
+    return
+  fi
+  
+  # Safely get the command usage count; default to 0 if fc or grep fails
+  local count
+  count=$(fc -ln 2>/dev/null | grep -Fxc -- "$cmd" 2>/dev/null) || count=0
+  # Use arithmetic context to avoid string parsing issues
+  if [ "$count" -ge 5 ]; then
+    echo "Consider aliasing '${cmd}' (used ${count} times)"
+  fi
+}
+
+# Add alias usage hook (add-zsh-hook already loaded above)
+add-zsh-hook preexec check_alias_usage
+
+# ========================================
+# Smart Directory Functions (Fast & Simple)
+# ========================================
+
+# Simple cache to avoid repeated expensive operations
+typeset -A _SIMPLE_CACHE
+_CACHE_DURATION=10  # Cache for 10 seconds only
+
+# Fast project detection with minimal overhead
+_detect_project_smart() {
+  local dir="$1"
+  
+  # Quick file existence checks (fastest possible)
+  [[ -f "$dir/package.json" ]] && echo "nodejs" && return
+  [[ -f "$dir/Cargo.toml" ]] && echo "rust" && return
+  [[ -f "$dir/pyproject.toml" ]] || [[ -f "$dir/requirements.txt" ]] || [[ -f "$dir/setup.py" ]] && echo "python" && return
+  [[ -f "$dir/Makefile" ]] && echo "make" && return
+  [[ -f "$dir/docker-compose.yml" ]] || [[ -f "$dir/compose.yml" ]] && echo "docker" && return
+  [[ -d "$dir/.git" ]] && echo "git" && return
+  echo "directory"
+}
+
+
+# -----------------------------------------------------------------------------
+# Load external custom functions (e.g., finfo, colorshow)
+# -----------------------------------------------------------------------------
+# Load all .zsh files from ~/.zsh_functions directory
+if [[ -d ~/.zsh_functions ]]; then
+    for func_file in ~/.zsh_functions/*.zsh(N); do
+        [[ -f "$func_file" ]] && source "$func_file"
+    done
+fi
+
+# -----------------------------------------------------------------------------
+# (Removed embedded finfo implementation; now modularised under ~/.zsh_functions)
+# -----------------------------------------------------------------------------
+
+
+
+# Get basic stats with simple caching
+_get_dir_stats() {
+  local dir="$1"
+  local cache_key="${dir//\//_}_stats"
+  local current_time=$SECONDS
+  
+  # Check simple cache
+  local cached_time=${_SIMPLE_CACHE["${cache_key}_time"]:-0}
+  if [[ $((current_time - cached_time)) -lt $_CACHE_DURATION ]]; then
+    echo "${_SIMPLE_CACHE["${cache_key}_data"]}"
+    return
+  fi
+  
+  # Quick count (limit to avoid slowdown)
+  local dir_count=$(find "$dir" -maxdepth 1 -type d 2>/dev/null | head -50 | wc -l | tr -d ' ')
+  local file_count=$(find "$dir" -maxdepth 1 -type f 2>/dev/null | head -50 | wc -l | tr -d ' ')
+  
+  # Cache result
+  local result="$dir_count:$file_count"
+  _SIMPLE_CACHE["${cache_key}_time"]=$current_time
+  _SIMPLE_CACHE["${cache_key}_data"]="$result"
+  
+  echo "$result"
+}
+
+
+# Fast & Smart location overview (formerly overriding pwd)
+function whereami() {
+  local current_dir=$(command pwd)
+  local home_replaced=${current_dir/#$HOME/~}
+  
+  # Quick file counts (no subprocesses)
+  local -a _dirs _files
+  _dirs=( ./*(/N) )
+  _files=( ./*(.N) )
+  local dir_count=${#_dirs}
+  local file_count=${#_files}
+  
+  # Fast project detection (inline)
+  local project_type="directory"
+  local project_display="📂 Directory"
+  local quick_actions=""
+  
+  if [[ -f "package.json" ]]; then
+    project_type="nodejs"
+    project_display="📦 \033[34mNode.js\033[0m"
+    [[ ! -d "node_modules" ]] && quick_actions+="\033[33m💡 npm install\033[0m "
+    local scripts=$(jq -r '.scripts | keys[0:3] | join(" ")' package.json 2>/dev/null)
+    [[ -n "$scripts" ]] && quick_actions+="\033[36m$scripts\033[0m"
+  elif [[ -f "Cargo.toml" ]]; then
+    project_type="rust"
+    project_display="🦀 \033[31mRust\033[0m"
+    quick_actions+="\033[36mbuild run test\033[0m"
+  elif [[ -f "pyproject.toml" ]] || [[ -f "requirements.txt" ]] || [[ -f "setup.py" ]]; then
+    project_type="python"
+    project_display="🐍 \033[33mPython\033[0m"
+    [[ -z "$VIRTUAL_ENV" && -z "$CONDA_DEFAULT_ENV" ]] && [[ -d "venv" || -d ".venv" ]] && quick_actions+="\033[33m💡 activate venv\033[0m"
+  elif [[ -f "Makefile" ]]; then
+    project_type="make"
+    project_display="🔨 \033[35mMake\033[0m"
+  elif [[ -f "docker-compose.yml" ]] || [[ -f "compose.yml" ]]; then
+    project_type="docker"
+    project_display="🐳 \033[34mDocker\033[0m"
+    quick_actions+="\033[36mup down logs\033[0m"
+  elif [[ -d ".git" ]]; then
+    project_type="git"
+    project_display="📁 \033[32mGit Repository\033[0m"
+  fi
+  
+  # Git status (if git repo)
+  local git_status=""
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    local branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "detached")
+    local uncommitted=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    if [[ $uncommitted -gt 0 ]]; then
+      git_status="\033[31m●\033[0m${branch} \033[2m($uncommitted)\033[0m"
+    else
+      git_status="\033[32m●\033[0m${branch}"
+    fi
+  fi
+  
+  # Get size info for smaller directories
+  local size_info=""
+  if [[ $((dir_count + file_count)) -lt 100 ]]; then
+    if command -v dust >/dev/null 2>&1; then
+      size_info=$(dust -d 0 "$current_dir" 2>/dev/null | tail -1 | awk '{print $1}' 2>/dev/null)
+    elif command -v du >/dev/null 2>&1; then
+      size_info=$(du -sh "$current_dir" 2>/dev/null | cut -f1)
+    fi
+  fi
+
+  # Build output (send to stderr to avoid polluting stdout)
+  >&2 echo
+  >&2 echo -e "\033[1m\033[44m 🧠 INTELLIGENT LOCATION \033[0m"
+  >&2 echo -e "📍 \033[1m\033[33m${home_replaced}\033[0m"
+  >&2 echo
+  >&2 echo -e "$project_display \033[2m|\033[0m \033[32m$dir_count\033[0m dirs \033[35m$file_count\033[0m files"
+  
+  [[ -n "$size_info" && "$size_info" != "0B" ]] && >&2 echo -e "💾 \033[1mSize:\033[0m \033[35m$size_info\033[0m"
+  [[ -n "$git_status" ]] && >&2 echo -e "🔧 $git_status"
+  [[ -n "$quick_actions" ]] && >&2 echo -e "⚡ $quick_actions"
+  
+  >&2 echo
+}
+
+# Show project/context hints on directory change (use chpwd hook instead of overriding cd)
+chpwd_show_context() {
+  local current_dir=$(command pwd)
+  local project_type=$(_detect_project_smart "$current_dir")
+  
+  # Only show intelligence for interesting projects
+  if [[ "$project_type" != "directory" ]]; then
+    local colors_reset='\033[0m' yellow='\033[33m' blue='\033[34m' green='\033[32m' red='\033[31m' cyan='\033[36m' dim='\033[2m'
+    local suggestions=""
+    
+    case $project_type in
+      "nodejs")
+        [[ ! -d "node_modules" ]] && suggestions+="${yellow}💡 npm install${colors_reset} "
+        [[ -f "package.json" ]] && {
+          local scripts=$(jq -r '.scripts | keys[0:2] | join(", ")' package.json 2>/dev/null)
+          [[ -n "$scripts" ]] && suggestions+="${cyan}Available: $scripts${colors_reset}"
+        }
+        ;;
+      "python")
+        [[ -z "$VIRTUAL_ENV" && -z "$CONDA_DEFAULT_ENV" ]] && [[ -d "venv" || -d ".venv" ]] && suggestions+="${yellow}💡 Activate virtual environment${colors_reset}"
+        ;;
+      "rust")
+        suggestions+="${cyan}cargo build, run, test${colors_reset}"
+        ;;
+      "docker")
+        suggestions+="${cyan}docker-compose up/down${colors_reset}"
+        ;;
+    esac
+    
+    # Show git status if repo has changes
+    if git rev-parse --git-dir >/dev/null 2>&1; then
+      local uncommitted=$(git status --porcelain -uno 2>/dev/null | wc -l | tr -d ' ')
+      [[ $uncommitted -gt 0 ]] && suggestions+=" ${red}⚠ $uncommitted uncommitted changes${colors_reset}"
+    fi
+    
+    # Display suggestions if any
+    if [[ -n "$suggestions" ]]; then
+      echo -e "${dim}💡 $suggestions${colors_reset}" >&2
+    fi
+  fi
+}
+
+# Register chpwd hook
+add-zsh-hook chpwd chpwd_show_context
+
+# ========================================
+# Load External Configuration Files
+# ========================================
+# Load organized aliases from separate file
+[[ -f ~/.zsh_config/aliases.zsh ]] && source ~/.zsh_config/aliases.zsh
+
+# Path copying functions
+_copy_path_full() {
+  local target="${1:-.}"
+  local abs_path=$(realpath "$target" 2>/dev/null || greadlink -f "$target" 2>/dev/null || echo "$PWD/$target")
+  echo -n "$abs_path" | pbcopy
+  echo "📋 Copied absolute path: $abs_path"
+}
+
+_copy_path_relative() {
+  local target="${1:-.}"
+  local rel_path
+  if [[ "$target" == "." ]]; then
+    rel_path="."
+  else
+    rel_path=$(realpath --relative-to="$PWD" "$target" 2>/dev/null || greadlink --relative-to="$PWD" "$target" 2>/dev/null || echo "$target")
+  fi
+  echo -n "$rel_path" | pbcopy
+  echo "📋 Copied relative path: $rel_path"
+}
+
+_copy_path_filename() {
+  local target="${1:-.}"
+  local filename=$(basename "$target")
+  echo -n "$filename" | pbcopy
+  echo "📋 Copied filename: $filename"
+}
+
+# Buffer copying function for piped input
+_copy_to_buffer() {
+  local content
+  local line_count=0
+  local char_count=0
+  local preview=""
+  
+  # Read all input
+  content=$(cat)
+  
+  # Copy to clipboard
+  echo -n "$content" | pbcopy
+  
+  # Generate stats and preview
+  if [[ -n "$content" ]]; then
+    line_count=$(echo "$content" | wc -l | tr -d ' ')
+    char_count=$(echo -n "$content" | wc -c | tr -d ' ')
+    
+    # Create preview (first 50 chars, truncated)
+    preview=$(echo "$content" | head -c 50 | tr '\n' ' ')
+    [[ ${#content} -gt 50 ]] && preview="${preview}..."
+    
+    echo "📋 Copied to buffer: ${line_count} lines, ${char_count} chars"
+    echo "   Preview: ${preview}"
+  else
+    echo "📋 Copied empty content to buffer"
+  fi
+}
+
+# ========================================
+# Quality-of-life utilities and aliases
+# ========================================
+
+# Debug mode toggle functions
+debug_on() {
+  set -x  # Enable command tracing
+  setopt XTRACE
+  setopt VERBOSE
+  echo "🔧 Debug mode ON - commands will be traced"
+}
+
+debug_off() {
+  set +x  # Disable command tracing
+  unsetopt XTRACE
+  unsetopt VERBOSE
+  echo "🔧 Debug mode OFF"
+}
+
+# Toggle WARN_CREATE_GLOBAL for diagnostics
+warn_globals_on() { setopt WARN_CREATE_GLOBAL; echo "WARN_CREATE_GLOBAL ON"; }
+warn_globals_off() { unsetopt WARN_CREATE_GLOBAL; echo "WARN_CREATE_GLOBAL OFF"; }
+
+# Function to show detailed command information
+cmd_info() {
+  local cmd="$1"
+  if [[ -z "$cmd" ]]; then
+    echo "Usage: cmd_info <command>"
+    return 1
+  fi
+  
+  echo "📋 Information for command: $cmd"
+  echo "   Type: $(type -a "$cmd" 2>/dev/null || echo 'Not found')"
+  echo "   Location: $(which "$cmd" 2>/dev/null || echo 'Not in PATH')"
+  echo "   Version: $("$cmd" --version 2>/dev/null || "$cmd" -v 2>/dev/null || echo 'Version info not available')"
+}
+
+# Enhanced error tracking function
+last_error() {
+  echo "Last command exit status: $?"
+  [[ -n "$_last_command" ]] && echo "Last command: $_last_command"
+}
+
+# Create a directory and enter it
+mkcd() { mkdir -p -- "$1" && builtin cd -- "$1"; }
+
+# Jump to git repo root (or stay if not in a repo)  
+git_root() { builtin cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"; }
+
+# Clipboard path aliases
+alias cpwd='_copy_path_full .'
+alias cpr='_copy_path_relative .'
+alias cfn='_copy_path_filename .'
+
+# Safer rm and friendlier mkdir
+alias rm='rm -i'
+alias mkdir='mkdir -pv'
+
+# Better man pages with bat if available
+command -v bat >/dev/null 2>&1 && export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+
+# Sensible default editor
+export EDITOR="${EDITOR:-nvim}"
+export VISUAL="$EDITOR"
+
+# Enhanced debugging aliases
+alias trace='debug_on'     # Start command tracing
+alias notrace='debug_off'  # Stop command tracing
+alias err='last_error'     # Show last error info
+alias cmdinfo='cmd_info'   # Show command information
+alias verbose='set -v'     # Enable verbose mode
+alias quiet='set +v'       # Disable verbose mode
+
+# Troubleshooting aliases
+alias path-check='echo $PATH | tr ":" "\n" | nl'  # Show PATH entries numbered
+alias env-grep='env | grep -i'                      # Search environment variables
+alias which-all='type -a'                           # Show all locations of a command
+alias fix-perms='chmod +x'                          # Quick permission fix
+alias check-syntax='zsh -n'                         # Check shell script syntax
+
+# ========================================
+# Tool Initializations
+# ========================================
+
+# Conda (managed block)
+
+# FZF (only source if not using Oh My Zsh fzf plugin)
+# [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# iTerm2 integration
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
+# ========================================
+# Amazon Q Configuration
+# ========================================
+# Check if Amazon Q is installed and set up environment
+if [[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.pre.zsh" ]]; then
+    export Q_TERM="1"  # Ensure Q_TERM is set
+fi
+
+if [[ -n "${Q_TERM:-}" ]]; then
+    # Amazon Q completion optimizations
+    zstyle ':completion:*' menu select=2
+    zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+    zstyle ':completion:*' verbose true
+    zstyle ':completion:*:descriptions' format '%B%d%b'
+    zstyle ':completion:*:messages' format '%d'
+    zstyle ':completion:*:warnings' format 'No matches for: %d'
+    zstyle ':completion:*' group-name ''
+    
+    # Enable completion caching
+    zstyle ':completion:*' use-cache on
+    zstyle ':completion:*' cache-path ~/.zsh/cache
+    
+    # Better file completion
+    zstyle ':completion:*:*:*:*:*' menu select
+    zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+    
+    # Git completions
+    zstyle ':completion:*:git:*' tag-order 'heads:-branch:branch\ names'
+    zstyle ':completion:*:*:git:*' user-commands true
+    
+    # Amazon Q environment
+    export Q_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#666666,bg=none,bold,underline"
+    export Q_AUTOSUGGEST_STRATEGY="inline_shell_completion history completion"
+    export Q_COMPLETION_ENHANCED=1
+    export Q_COMPLETION_UI_ENABLED=1
+    export Q_RICH_COMPLETIONS=1
+fi
+
+
+# ========================================
+# Quick Tool Guide: Installed CLI Enhancements
+# ========================================
+# lsd & exa       - modern, colorized replacements for 'ls'
+# ctop / lazydocker - interactive terminal UIs for Docker containers (like htop for Docker)
+# btop            - enhanced 'htop' with graphs and themes (alternatives: glances)
+# bat             - a 'cat' clone with syntax highlighting and Git integration
+# radian          - a better, modern R console with improved REPL
+# dust            - intuitive 'du' replacement showing largest dirs (alternative: ncdu)
+# duf             - combines 'du' and 'df' into one display with filters
+# atuin           - SQLite-backed shell history navigator with fuzziness and sync
+# fzf             - interactive fuzzy finder for files, history, processes
+# fd              - fast, user-friendly alternative to 'find'
+# zoxide          - smarter 'cd' with frecency-based jumps (inspired by 'z')
+# broot           - a new directory tree explorer with preview and actions
+# ripgrep         - blazingly fast search tool (alternative to 'grep')
+# choose          - quick selection tool for delimiters, cut and awk use cases
+# zellij          - modern terminal workspace (an alternative to tmux)
+# top             - dynamic real-time process viewer
+# tldr            - simplified, community-driven man pages
+# cheat           - search and recall CLI cheat sheets interactively
+# sd              - intuitive, interactive 'sed' replacement
+# resilio         - simplified 'rsync' alternative for file sync
+# bottom / gtop   - alternative process viewers with different UIs
+# gping           - ping with live graphing
+# hyperfine       - command-line benchmarking tool
+# procs           - modern replacement for 'ps' with colors and JSON
+# httpie          - user-friendly HTTP client (curl alternative)
+# curlie          - curl with syntax highlighting and intuitive UI
+# doggo           - DNS lookup utility with enhanced output
+# lazygit         - simple terminal UI for Git commands
+# macchina       - system information tool
+# glow           - markdown viewer
+#
+# To use these, see each tool's help (e.g., 'lsd --help', 'radian --help', 'fd --help').
+# ========================================
+
+# Amazon Q post block. Keep at the bottom of this file.
+[[ -f "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/amazon-q/shell/zshrc.post.zsh"
+if [[ -f $HOME/.config/broot/launcher/zsh/br ]]; then
+  source "$HOME/.config/broot/launcher/zsh/br"
+elif [[ -f $HOME/.config/broot/launcher/bash/br ]]; then
+  source "$HOME/.config/broot/launcher/bash/br"
+fi
+
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/pavb5f/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/pavb5f/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/pavb5f/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/pavb5f/google-cloud-sdk/completion.zsh.inc'; fi
+# PATH and Java already configured above
+
+# >>> mamba initialize >>>
+# !! Contents within this block are managed by 'mamba shell init' !!
+export MAMBA_EXE='/opt/homebrew/bin/mamba';
+export MAMBA_ROOT_PREFIX='/Users/pavb5f/.local/share/mamba';
+__mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__mamba_setup"
+else
+    alias mamba="$MAMBA_EXE"  # Fallback on help from mamba activate
+fi
+unset __mamba_setup
+# <<< mamba initialize <<<
+
+# Re-apply PATH uniqueness after external init scripts may have modified PATH
+path=($path)
+export PATH
+
+# Demote Google Cloud SDK in PATH so it doesn't override Homebrew/user tools
+if (( ${path[(Ie)$HOME/google-cloud-sdk/bin]} )); then
+  path=(${path:#$HOME/google-cloud-sdk/bin})
+  path+=($HOME/google-cloud-sdk/bin)
+  export PATH
+fi
+
+# =============================================================================
+# ZSH SYNTAX HIGHLIGHTING COLORWAY SHOWCASE
+# =============================================================================
+# Beautiful demonstration of all command types and their colors
+
+colorshow() {
+    local category="${1:-all}"
+    
+    echo
+    echo "🌈 ZSH SYNTAX HIGHLIGHTING COLORWAY SHOWCASE 🌈"
+    echo "Demonstrating all command types with their respective colors"
+    echo
+    
+    case "$category" in
+        "builtins"|"all")
+            echo "🔵 SHELL BUILTINS (Blue Bold):"
+            echo "  cd ~/Documents"
+            echo "  pwd" 
+            echo "  echo 'Hello World'"
+            echo "  export PATH=\$PATH:/new/path"
+            echo
+            ;&
+        "functions"|"all")
+            echo "🟣 USER FUNCTIONS (Magenta):"
+            local user_functions=($(functions | grep -E '^[a-zA-Z_][a-zA-Z0-9_]*' | head -5 | cut -d' ' -f1))
+            if [[ ${#user_functions[@]} -gt 0 ]]; then
+                for func in $user_functions; do
+                    echo "  $func"
+                done
+            else
+                echo "  my_function arg1 arg2"
+                echo "  custom_script --option"
+            fi
+            echo
+            ;&
+        "aliases"|"all")
+            echo "🔵 ALIASES (Cyan):"
+            echo "  ll"
+            echo "  sz" 
+            echo "  ls -la"
+            echo
+            ;&
+        "commands"|"all")
+            echo "🟢 EXTERNAL COMMANDS (Green):"
+            local common_commands=(git ls cat grep find curl wget npm python)
+            local available_commands=()
+            for cmd in $common_commands; do
+                command -v $cmd >/dev/null 2>&1 && available_commands+=($cmd)
+            done
+            for cmd in ${available_commands[1,6]}; do
+                echo "  $cmd"
+            done
+            echo
+            echo "  Usage examples:"
+            echo "  git status"
+            echo "  ls -la"
+            echo "  grep 'pattern' file.txt"
+            echo
+            ;&
+        "popular"|"all")
+            echo "🛠️  POPULAR TOOLS:"
+            local dev_tools=(code vim docker npm pip brew conda)
+            local available_dev=()
+            for tool in $dev_tools; do
+                command -v $tool >/dev/null 2>&1 && available_dev+=($tool)
+            done
+            for tool in ${available_dev[1,8]}; do
+                echo "  $tool"
+            done
+            echo
+            ;&
+        "syntax"|"all")
+            echo "🎨 SYNTAX ELEMENTS:"
+            echo "  Quoted strings (yellow):     echo 'hello' \"world\""
+            echo "  File paths (white):         /etc/hosts ~/Documents"
+            echo "  Options (cyan):             ls -la --color=auto" 
+            echo "  Pipes (magenta):            cat file | grep pattern"
+            echo "  Globbing (blue):            ls *.txt"
+            echo
+            ;&
+    esac
+    
+    if [[ "$category" == "all" || "$category" == "" ]]; then
+        echo "🎯 COLOR LEGEND:"
+        echo "🔵 Blue Bold     - Shell builtins"
+        echo "🟣 Magenta       - User functions"  
+        echo "🔵 Cyan          - Aliases & options"
+        echo "🟢 Green         - External commands"
+        echo "🟡 Yellow        - Quoted strings"
+        echo "🔴 Red           - Invalid/dangerous commands"
+        echo "⚪ White         - File paths (underlined)"
+        echo
+        echo "Usage: colorshow [category]"
+        echo "Categories: builtins, functions, aliases, commands, popular, syntax, all"
+    fi
+}
+
+# Convenience aliases for colorshow
+alias colors="colorshow"
+alias syntax-demo="colorshow"  
+alias highlight-demo="colorshow all"
+
+# Load specific function modules if present (already generally loaded above)
+for f in \
+  ~/.zsh_functions/list_commands.zsh \
+  ~/.zsh_functions/demo_commands.zsh \
+  ~/.zsh_functions/list_variables.zsh \
+  ~/.zsh_functions/list_environments.zsh \
+  ~/.zsh_functions/help_system.zsh \
+  ~/.zsh_functions/list_credentials.zsh
+do
+  [[ -f $f ]] && source "$f"
+done
+
+# On-demand byte-compilation for faster startup
+if command -v zcompile >/dev/null 2>&1; then
+  if [[ -s ~/.zshrc && ( ! -s ~/.zshrc.zwc || ~/.zshrc -nt ~/.zshrc.zwc ) ]]; then
+    zcompile ~/.zshrc
+  fi
+fi
