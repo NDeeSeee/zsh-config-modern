@@ -1,0 +1,27 @@
+#!/usr/bin/env zsh
+# ========================================
+# Modular ZSH Configuration Loader  
+# ========================================
+# This is the main .zshrc file that loads the modular configuration
+# Place this file at ~/.zshrc to replace the monolithic configuration
+
+# Define the modular configuration directory
+ZSH_MODULAR_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
+
+# Check if modular configuration exists
+if [[ -f "$ZSH_MODULAR_CONFIG/zshrc" ]]; then
+    # Source the modular configuration
+    source "$ZSH_MODULAR_CONFIG/zshrc"
+else
+    echo >&2 "Error: Modular ZSH configuration not found at $ZSH_MODULAR_CONFIG"
+    echo >&2 "Please ensure the configuration is properly installed."
+    
+    # Fallback to basic configuration
+    echo >&2 "Loading minimal fallback configuration..."
+    
+    # Basic PATH setup
+    export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$HOME/.local/bin:$HOME/bin:/usr/local/bin:$PATH"
+    
+    # Basic prompt
+    PS1="%n@%m:%~$ "
+fi
