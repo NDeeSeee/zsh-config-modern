@@ -38,8 +38,22 @@ _safe_load() {
 }
 
 # ========================================
-# Phase 1: Pre-Oh My Zsh Setup
+# Phase 1: Pre-Oh My Zsh Setup & Performance Systems
 # ========================================
+
+# Load performance systems first (for maximum benefit)
+_safe_load \
+  "core/helpers.zsh" \
+  "core/cache.zsh" \
+  "core/lazy-loader.zsh"
+
+# Initialize the performance systems
+_init_helpers
+_init_cache_system  
+_init_lazy_loading
+
+# Start total startup time measurement
+time_start "zsh_total_startup"
 
 # Amazon Q must be loaded first
 _load_module "tools/amazon-q.zsh" && _source_amazon_q_pre
@@ -65,20 +79,19 @@ _safe_load \
 _load_module "plugins/omz.zsh"
 
 # ========================================
-# Phase 3: Functions and Utilities
+# Phase 3: Functions and Utilities (Lazy Loading)
 # ========================================
 
-# Load and initialize function modules
+# Load essential modules (non-lazy)
 _safe_load \
   "functions/autoload/performance-monitoring.zsh" \
-  "functions/autoload/directory-intelligence.zsh" \
-  "functions/autoload/utility-functions.zsh" \
   "functions/autoload/aliases.zsh"
 
-# Initialize function hooks
+# Set up performance monitoring (essential for startup measurement)
 _setup_performance_monitoring
-_setup_directory_intelligence  
-_setup_utility_functions
+
+# Note: directory-intelligence.zsh and utility-functions.zsh are now lazy-loaded
+# They will be loaded on first use of their functions via the lazy loading system
 
 # ========================================
 # Phase 4: External Tool Integrations
@@ -101,24 +114,28 @@ _safe_load \
 # Phase 6: Final Cleanup and Optimizations
 # ========================================
 
-# Clean up PATH and apply performance optimizations
-_cleanup_path
+# Clean up PATH and apply performance optimizations  
+cleanup_path
 _demote_gcloud_in_path
 
 # Amazon Q post-processing (must be last)
 _source_amazon_q_post
 
 # ========================================
-# Cleanup
+# Cleanup & Final Performance Measurement
 # ========================================
+
+# End total startup time measurement
+time_end "zsh_total_startup"
 
 # Remove helper functions from global scope
 unset -f _load_module _safe_load
 
-# Display quick tool reference
+# Display quick tool reference with performance info
 echo
-echo "🚀 Modular ZSH Configuration Loaded"
-echo "   • Type 'whereami' for intelligent directory info"
-echo "   • Type 'colors' to see syntax highlighting demo"
-echo "   • Enhanced error monitoring and performance tracking active"
+echo "🚀 Modular ZSH Configuration Loaded (Phase 2 Optimized)"
+echo "   • Type 'whereami' for intelligent directory info (lazy-loaded)"
+echo "   • Type 'colorshow' to see syntax highlighting demo (lazy-loaded)"
+echo "   • Advanced caching and lazy loading active for <200ms startup"
+echo "   • Performance monitoring and error tracking enabled"
 echo
