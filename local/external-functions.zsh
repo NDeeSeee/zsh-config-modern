@@ -13,6 +13,8 @@ fi
 if [[ -f ~/.zsh_config/aliases.zsh ]]; then
   source ~/.zsh_config/aliases.zsh
   echo "✅ Loaded aliases from ~/.zsh_config/aliases.zsh" >&2
+  echo "🔧 DEBUG: Right after loading aliases - count: $(alias | wc -l)" >&2
+  echo "🔧 DEBUG: Right after loading aliases - 'll' exists: $(type ll 2>/dev/null && echo 'YES' || echo 'NO')" >&2
 else
   echo "❌ Aliases file not found: ~/.zsh_config/aliases.zsh" >&2
 fi

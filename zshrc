@@ -1,12 +1,24 @@
 #!/usr/bin/env zsh
 # ========================================
-# Modular ZSH Configuration
+# Modular ZSH Configuration  
 # ========================================
 # A streamlined, high-performance shell configuration
 # Organized into logical modules for maintainability
 
+# Prevent double-loading
+if [[ -n "$ZSH_CONFIG_DIR" ]]; then
+  echo "🔧 DEBUG: Modular zsh config already loaded, skipping..." >&2
+  return 0
+fi
+
+# CRITICAL DEBUG: Show that this file is being read AT ALL
+echo "🚨 CRITICAL DEBUG: Modular zshrc file is being loaded!" >&2
+
 # Configuration directory
 ZSH_CONFIG_DIR="${${(%):-%x}:A:h}"
+
+# Debug: Show that .zshrc is being loaded
+echo "🔧 DEBUG: Loading modular .zshrc from $ZSH_CONFIG_DIR" >&2
 
 # Error handling function for module loading
 _load_module() {
@@ -93,6 +105,8 @@ _safe_load \
 # Phase 5: Local and External Configurations
 # ========================================
 
+echo "🔧 DEBUG: Reached Phase 5" >&2
+
 _safe_load \
   "local/external-functions.zsh" \
   "local/performance.zsh"
@@ -113,7 +127,13 @@ _source_amazon_q_post
 # ========================================
 
 # Remove helper functions from global scope
+echo "🔧 DEBUG: Before unset, aliases: $(alias | wc -l)" >&2
 unset -f _load_module _safe_load
+echo "🔧 DEBUG: After unset, aliases: $(alias | wc -l)" >&2
+
+# Final debugging - check aliases at very end
+echo "🔧 DEBUG: Final check - aliases available: $(alias | wc -l)" >&2
+echo "🔧 DEBUG: Final check - 'll' alias exists: $(type ll 2>/dev/null && echo 'YES' || echo 'NO')" >&2
 
 # Display quick tool reference
 echo
